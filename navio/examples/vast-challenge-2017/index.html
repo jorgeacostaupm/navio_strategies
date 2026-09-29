@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<body>
+  <h1>Vast Challenge 2017 <small>Mini challenge 1</small></h1>
+
+  <!-- Placeholder for the widget -->
+  <div id="target"></div>
+
+  <!-- navio Step 0: Load the libraries -->
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script> -->
+  <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+  <script src="../../dist/navio.js"></script>
+  <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
+
+<script>
+/* global d3, navio */
+
+// navio  Step 1.  Create a navio passing the selector to place it and the height
+var nn = navio(d3.select("#target"), 600);
+
+// navio Step 2 [optional] Add the Categorical and Sequential attributes you want to use manually (Or use addAllAttribs after loading the data)
+// var catColumns = ["car-type", "gate-name", "dayOfTheWeek", "car-id", "year"];
+// var seqColumns = ["minutes", "hours", "day", "month", "seconds", "carIdPart1", "carIdPart2", "Timestamp"];
+// catColumns.forEach((c) => nn.addCategoricalAttrib(c));
+// seqColumns.forEach((c) => nn.addSequentialAttrib(c));
+
+// d3 v7: csv() returns a promise and takes (url, row). Passing a third
+// argument makes d3 read `type` as requestInit and the CALLBACK as the row
+// function - so `if (err) throw err` threw every parsed row, one per line.
+d3.csv("./Lekagul Sensor Data.csv", type)
+  .then(function (data) {
+    // navio Step 3. Load your data!
+    nn.data(data);
+    nn.addAllAttribs();
+  })
+  .catch(function (err) {
+    console.error("Could not load the sensor data", err);
+  });
+
+
+var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");
+function type(row) {
+  var split = row["car-id"].split("-");
+  row.Timestamp = fmt(row.Timestamp);
+  row.hours = row.Timestamp.getHours();
+  row.dayNight = row.hours < 6 || row.hours > 18 ? "night" : "day";
+  row.dayOfTheWeek = row.Timestamp.getDay();
+  row.minutes = row.Timestamp.getMinutes();
+  row.seconds = row.Timestamp.getSeconds();
+  row.year = row.Timestamp.getFullYear();
+  row.month = row.Timestamp.getMonth();
+  row.day = row.Timestamp.getDate();
+  row.carIdPart1 = +split[0];
+  row.carIdPart2 = +split[1];
+  return row;
+}
+</script>
+</body>
+</html>

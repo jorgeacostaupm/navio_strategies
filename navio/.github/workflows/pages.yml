@@ -1,0 +1,114 @@
+name: Deploy navio.dev
+
+# navio.dev serves this repo. The demos under examples/ load ../../dist/, but
+# dist/ is deliberately gitignored (42e1cd0, "Removing dist from github"), so a
+# plain branch deploy 404s on the bundle. This builds dist/ and ships it
+# alongside the Jekyll-rendered site.
+#
+# jekyll-build-pages runs the same github-pages gem the legacy branch build
+# used, so the homepage - which is README.md rendered with jekyll-seo-tag and
+# the default theme, with no _config.yml in the repo - keeps rendering the same
+# way. See docs/ai/ and issue #65.
+#
+# This runs AFTER CI rather than beside it (issue #93). On `push: [main]` both
+# workflows started concurrently, so a commit could publish to the live site
+# while CI was still in the middle of failing on it - and because dist/ is
+# gitignored and built here, that published bundle was the only artifact of the
+# build, with no last-known-good copy in the tree to fall back on.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    # The head branch of the CI run. Push-to-main runs match; PR runs carry the
+    # PR's own branch and do not.
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a half-finished deploy of a live site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # workflow_run fires on every CI outcome, including failure and the
+    # cancellation that ci.yml's own cancel-in-progress produces, so the
+    # conclusion has to be checked explicitly - `types: [completed]` only means
+    # "finished", not "succeeded". The event check keeps a fork PR whose head
+    # branch happens to be named `main` from reaching the live site.
+    # A manual dispatch is the deliberate escape hatch and skips both.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push')
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Deploy exactly the commit CI verified, not whatever main points at by
+      # now. Under workflow_run, checkout would otherwise default to the tip of
+      # the default branch, which may already have moved on to an untested
+      # commit. Empty on a manual dispatch, where github.ref is what was asked
+      # for.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Must run before the Jekyll step so dist/ is on disk and gets copied
+      # into _site as a static file.
+      - name: Build the bundle
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      # Jekyll's default excludes drop node_modules, so only the site content
+      # and the freshly built dist/ end up in _site.
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: .
+          destination: ./_site
+
+      # Jekyll normally copies dist/ through as a static file. Verify that
+      # rather than assuming it, and fall back to copying only if it is
+      # missing. jekyll-build-pages runs in a container as root, so _site is
+      # not writable by the runner user - hence sudo on the fallback path.
+      - name: Ensure dist/ shipped
+        run: |
+          if [ ! -s ./_site/dist/navio.js ]; then
+            echo "Jekyll did not carry dist/ through; copying it in."
+            sudo mkdir -p ./_site/dist
+            sudo cp -r dist/. ./_site/dist/
+          fi
+          # A missing bundle or an unrendered homepage must fail the deploy
+          # rather than quietly publishing a broken site.
+          test -s ./_site/dist/navio.js
+          test -s ./_site/index.html
+          echo "dist/navio.js  $(wc -c < ./_site/dist/navio.js) bytes"
+          echo "index.html     $(wc -c < ./_site/index.html) bytes"
+
+      # Old demo paths were published URLs before the demos moved under
+      # examples/. Generated here rather than kept in the repo, so the tree
+      # stays clean without breaking external links.
+      - name: Write legacy redirects
+        run: sudo node build/legacy-redirects.js ./_site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

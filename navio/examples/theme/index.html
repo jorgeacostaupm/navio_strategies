@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navio in dark mode</title>
+    <style>
+      /* The page provides the ground; Navio never paints one. So the page's own
+         colours follow the same setting the widget does. */
+      :root {
+        --bg: #fff;
+        --fg: #1b1e23;
+        --panel: #f4f6f8;
+        --hairline: #d6dae0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-force="light"]) {
+          --bg: #14161a;
+          --fg: #e9eaee;
+          --panel: #1b1e24;
+          --hairline: #333941;
+        }
+      }
+      :root[data-force="dark"] {
+        --bg: #14161a;
+        --fg: #e9eaee;
+        --panel: #1b1e24;
+        --hairline: #333941;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 900px;
+        margin: 0 auto 120px;
+        padding: 0 16px;
+      }
+      .note {
+        background: var(--panel);
+        border-left: 3px solid #b2ddf1;
+        padding: 12px 16px;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      code {
+        font: 13px ui-monospace, Menlo, monospace;
+        background: var(--panel);
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      pre {
+        font: 13px/1.5 ui-monospace, Menlo, monospace;
+        background: var(--panel);
+        border: 1px solid var(--hairline);
+        border-radius: 6px;
+        padding: 12px 14px;
+        overflow-x: auto;
+      }
+      button {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 12px;
+        margin: 0 6px 12px 0;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--hairline);
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button[aria-pressed="true"] {
+        background: var(--fg);
+        color: var(--bg);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Navio in dark mode</h1>
+
+    <p>
+      Navio ships no stylesheet &mdash; every colour it draws is an inline style
+      or a canvas stroke &mdash; so a dark page used to get black column headers
+      on a black background. It now reads the background it is sitting on and
+      picks its ink to suit, while staying transparent itself.
+    </p>
+
+    <p id="buttons"></p>
+
+    <div class="note">
+      The buttons only change <strong>the page's</strong> colours. Nothing tells
+      the widget which theme to use &mdash; it looks at the ground behind it.
+      Headers, counts, borders, row dividers, the gear and the settings panel all
+      follow; open the gear in both. <strong>The data colours never change:</strong>
+      a category that is teal on a light page is the same teal on a dark one, and
+      so is the pink used for missing values.
+    </div>
+
+    <div id="nv"></div>
+
+    <pre>// if you know what your page looks like, say so once
+const nv = navio(d3.select("#nv"), { height: 400, theme: "dark" });
+
+// "auto" is the default: read the background behind the widget, and
+// re-read it on every redraw
+const nv = navio(d3.select("#nv"), { height: 400 });
+
+// or change it later
+nv.theme = "light";
+nv.hardUpdate();</pre>
+
+    <p>
+      There is a <strong>Theme</strong> control in the settings panel too
+      &mdash; the gear, under Layout &mdash; so a reader can override whatever
+      the page chose. It is remembered with the rest of the panel's settings.
+    </p>
+
+    <p>
+      Navio only redraws when something asks it to, so a page that repaints
+      itself calls <code>nv.hardUpdate()</code> afterwards &mdash; that is all
+      the buttons above do. <code>nv.resolvedTheme()</code> reports which theme
+      won.
+    </p>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="../../dist/navio.js"></script>
+    <script>
+      /* global d3, navio */
+      // The whole nutrients dataset - every column, including the ones with
+      // gaps. Missing values are drawn in nullColor, which follows the theme:
+      // the light default is a near-white pink that would be invisible on a
+      // dark ground. sugars and fiber are about half empty, so there is plenty
+      // to see.
+      d3.csv("../palettes/nutrients.csv", (d) => {
+        const row = {};
+        for (const key of Object.keys(d))
+          // An empty cell is MISSING, not zero. Coercing "" with + would draw
+          // it as a real value at the bottom of the scale.
+          row[key] = d[key] === "" ? null : isNaN(+d[key]) ? d[key] : +d[key];
+        return row;
+      }).then((rows) => {
+        const nv = navio(d3.select("#nv"), { height: 420, attribWidth: 22 });
+        nv.id("id");
+        nv.data(rows);
+        nv.addAllAttribs();
+        window.nv = nv;
+        buttons(nv);
+      });
+
+      function buttons(nv) {
+        for (const [value, label] of [
+          ["system", "Follow system"],
+          ["light", "Light page"],
+          ["dark", "Dark page"],
+        ]) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.dataset.value = value;
+          b.addEventListener("click", () => {
+            if (value === "system")
+              delete document.documentElement.dataset.force;
+            else document.documentElement.dataset.force = value;
+            // Note what is NOT here: nothing sets nv.theme. Repainting the page
+            // is enough, because the widget reads the background behind it. It
+            // just has to be told to redraw.
+            nv.hardUpdate();
+            for (const other of document.querySelectorAll("#buttons button"))
+              other.setAttribute(
+                "aria-pressed",
+                String(other.dataset.value === value)
+              );
+          });
+          document.getElementById("buttons").append(b);
+        }
+        document
+          .querySelector("#buttons button")
+          .setAttribute("aria-pressed", "true");
+      }
+    </script>
+  </body>
+</html>

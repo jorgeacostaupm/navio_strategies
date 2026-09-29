@@ -1,0 +1,77 @@
+{
+  "name": "navio",
+  "version": "0.3.1",
+  "description": "A visualization widget for summarizing and exploring data",
+  "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "!src/NavioComponent.jsx",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "dist/navio.min.js",
+  "module": "dist/navio.esm.js",
+  "browser": "dist/navio.min.js",
+  "unpkg": "dist/navio.min.js",
+  "jsdelivr": "dist/navio.min.js",
+  "dependencies": {
+    "d3": "^7.9.0",
+    "popper.js": "^1.16.1",
+    "reactive-widget-helper": "^0.0.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@observablehq/runtime": "^5.9.9",
+    "@playwright/test": "^1.62.1",
+    "@rollup/plugin-node-resolve": "^15.0.2",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/pluginutils": "^5.4.0",
+    "@vitest/eslint-plugin": "^1.6.24",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.11.0",
+    "globals": "^17.8.0",
+    "http-server": "^14.1.1",
+    "prettier": "^3.9.6",
+    "rollup": "^4.62.4",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "vitest": "^4.1.10"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && playwright test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run test && npm run build",
+    "postbuild": "node build/verify-bundle.js",
+    "prepublishOnly": "npm run check",
+    "postpublish": "node build/after-publish.mjs",
+    "docs:api": "node build/write-api-docs.js",
+    "palettes": "node build/gen-palettes.mjs",
+    "preversion": "node build/before-version.mjs",
+    "version": "npm run docs:api && npm run check && git add -A"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/john-guerra/navio.git"
+  },
+  "keywords": [
+    "DataViz",
+    "Data exploration"
+  ],
+  "author": {
+    "name": "John Alexis Guerra G\u00f3mez",
+    "url": "https://johnguerra.co"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/john-guerra/Navio/issues"
+  },
+  "homepage": "https://navio.dev"
+}
