@@ -1,4 +1,4 @@
-import { autoType, csvParseRows } from "../navio/node_modules/d3-dsv/src/index.js";
+import { autoType, csvParseRows } from "d3-dsv";
 
 export function parseCsv(text) {
   const [headers, ...rows] = csvParseRows(text.replace(/^\uFEFF/, ""));

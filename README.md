@@ -26,6 +26,16 @@ The goal is to add alternative strategies for row selection when the available s
 
 ## To run the project
 
+After downloading or cloning the repository, install dependencies from the project root:
+
+```sh
+npm install
+```
+
+Navio is configured as an npm workspace, so this single command installs dependencies for both the app and `navio/`. Vite imports Navio's source directly, so no separate Navio build is needed.
+
+Then start the development server from the project root:
+
 ```sh
 npm run dev
 ```
