@@ -12,7 +12,7 @@ export default function CsvLoader({ onData, recordCount }) {
     async function loadExample() {
       try {
         const response = await fetch(
-          `${import.meta.env.BASE_URL}examples/example.csv`,
+          `${import.meta.env.BASE_URL}examples/ai-mind-demo-data.csv`,
           {
             signal: controller.signal,
           },
@@ -71,7 +71,7 @@ export default function CsvLoader({ onData, recordCount }) {
         Expected format: comma-separated CSV with column names in the first row.
       </p>
       <p role="status">Currently loaded file: {filename}</p>
-      <p>Contains: {recordCount} records</p>
+      <p>Nº records: {recordCount}</p>
 
       {error && <p role="alert">{error}</p>}
     </div>

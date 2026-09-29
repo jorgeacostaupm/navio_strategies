@@ -24,7 +24,7 @@ Currently, `computeRepresentatives()` in `navio/src/navio.js` selects rows at re
 
 The goal is to add alternative strategies for row selection when the available space is insufficient to show all the data.
 
-## Run
+## To run the project
 
 ```sh
 npm run dev
